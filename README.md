@@ -7,8 +7,8 @@ pretending to replace ServiceNow or human accountability.
 > **Submission summary:** This repository contains a working prototype, a
 > complete architecture/design document, a runnable one-command launcher, and
 > an explainable human-approval workflow. See
-> [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md) for the
-> HLD, LLD, API design, schema, sequence diagrams, controls, and evaluation plan.
+> [ARCHITECTURE.md](./ARCHITECTURE.md) for the HLD, LLD, API design, schema,
+> sequence diagrams, controls, and evaluation plan.
 
 ## Prioritized capabilities
 
@@ -16,7 +16,7 @@ pretending to replace ServiceNow or human accountability.
 2. **Confidence-based decision engine** - uses a deterministic, explainable score: `50% retrieval similarity + 30% historical assignment-group agreement + 20% evidence quality`. Bands are `High >= 80%`, `Medium >= 60%`, and `Low < 60%`. Similarity is never presented as correctness.
 3. **Human-in-the-loop approval** - proposed routing/resolution is persisted as pending and cannot become approved or rejected until a named reviewer acts.
 4. **Human feedback / learning loop** - thumbs-up/down, corrections, and reviewer decisions are stored in SQLite for evaluation and future model improvement.
-5. **Conversational case workspace** - each ticket has a persisted chat transcript, reopenable from the sidebar, with context extraction and re-analysis as the conversation adds facts.
+5. **Conversational case workspace** - each ticket has a persisted chat transcript, with context extraction and re-analysis as the conversation adds facts. The current UI keeps one active case per session; the API supports reopening a case by ticket ID.
 
 The extra guardrail is an explicit state machine: RamGPT only prepares a handoff payload; a future ServiceNow adapter would be the only component allowed to apply it after approval.
 
@@ -26,7 +26,7 @@ The system has a Streamlit conversational workspace, a FastAPI orchestration
 API, SQLite audit storage, hybrid BM25/TF-IDF/FAISS retrieval, optional Gemini
 grounded generation, an explainable confidence policy, and a human approval
 boundary before any future ServiceNow write. The full architecture diagram and
-low-level design are in [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md).
+low-level design are in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Ticket walkthrough
 
@@ -106,8 +106,12 @@ grounded deterministic fallback is used and the API logs the reason.
 
 ## API surface
 
+* `GET /api/health` - report API readiness, retrieval mode, and Gemini availability
 * `POST /api/tickets/analyze` - retrieve evidence and create a pending recommendation
 * `GET /api/tickets` - inspect recent pilot tickets
+* `GET /api/tickets/{id}` - reopen a ticket and its persisted conversation
+* `GET /api/tickets/{id}/analysis` - recalculate analysis without creating a duplicate case
+* `POST /api/tickets/{id}/chat` - append a user message, generate an answer, and re-analyze
 * `POST /api/tickets/{id}/decision` - approve, reject, or edit with reviewer identity
 * `POST /api/tickets/{id}/feedback` - capture rating and corrections
 * `GET /api/evaluation` - run a reproducible nearest-neighbor team-retrieval proxy and show human-feedback counts
@@ -122,11 +126,11 @@ For production I would add authentication/RBAC, a proper relational database, em
 
 | Assignment deliverable | Location |
 |---|---|
-| Architecture diagram | [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md) |
-| HLD and LLD | [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md) |
-| API design and database schema | [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md) |
-| Ticket arrival-to-resolution walkthrough | This README and [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md) |
-| Working core logic | [backend/main.py](C:/Users/srava/Downloads/ramgpt/backend/main.py) |
-| Operator UI | [frontend.py](C:/Users/srava/Downloads/ramgpt/frontend.py) |
-| How success and failure are measured | Evaluation section in [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md) |
-| Assumptions, omissions, and next steps | [ARCHITECTURE.md](C:/Users/srava/Downloads/ramgpt/ARCHITECTURE.md) |
+| Architecture diagram | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| HLD and LLD | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| API design and database schema | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| Ticket arrival-to-resolution walkthrough | This README and [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| Working core logic | [backend/main.py](./backend/main.py) |
+| Operator UI | [frontend.py](./frontend.py) |
+| How success and failure are measured | Evaluation section in [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| Assumptions, omissions, and next steps | [ARCHITECTURE.md](./ARCHITECTURE.md) |
