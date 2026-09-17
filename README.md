@@ -95,7 +95,7 @@ Set:
 
 ```text
 GEMINI_API_KEY=your-real-gemini-api-key
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 ```
 
 The backend loads `.env` automatically. `.env` is included in `.gitignore` and

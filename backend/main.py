@@ -168,7 +168,11 @@ class ChatRequest(BaseModel):
     comment: str = Field(default="", max_length=1000)
 
 
-def retrieve(ticket: TicketRequest, limit: int = 5) -> list[dict]:
+def retrieve(
+    ticket: TicketRequest,
+    limit: int = 5,
+    exclude_indices: set[int] | None = None,
+) -> list[dict]:
     query_text = f"{ticket.short_description} {ticket.description}"
     lexical = cosine_similarity(VECTORIZER.transform([query_text]), MATRIX).ravel()
     semantic = {}
@@ -185,6 +189,8 @@ def retrieve(ticket: TicketRequest, limit: int = 5) -> list[dict]:
                 0.20 * (float(bm25_scores[index]) / max_bm25))
         for index in range(len(HISTORY))
     }
+    for index in exclude_indices or set():
+        scores[index] = -1.0
     indexes = sorted(scores, key=scores.get, reverse=True)[:limit]
     return [
         {**HISTORY[index], "similarity": round(float(scores[index]), 4),
@@ -323,7 +329,7 @@ Conversation:
 Latest user message: {user_text}
 """
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-1.5-flash"))
+    model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-3.6-flash"))
     try:
         response = model.generate_content(prompt)
         text = response.text.strip()
@@ -390,11 +396,12 @@ def evaluation() -> dict:
     top1 = 0
     top3 = 0
     for index, row in enumerate(sample):
-        query = VECTORIZER.transform([TEXTS[index]])
-        scores = cosine_similarity(query, MATRIX).ravel()
-        scores[index] = -1
-        indexes = scores.argsort()[::-1][:3]
-        groups = [HISTORY[result]["assignment_group"] for result in indexes]
+        ticket = TicketRequest(
+            short_description=row["short_description"],
+            description=row["description"],
+        )
+        matches = retrieve(ticket, limit=3, exclude_indices={index})
+        groups = [match["assignment_group"] for match in matches]
         top1 += int(groups and groups[0] == row["assignment_group"])
         top3 += int(row["assignment_group"] in groups)
     with closing(db()) as connection:
@@ -407,7 +414,7 @@ def evaluation() -> dict:
         "retrieval_top1_team_accuracy": round(top1 / len(sample), 3),
         "retrieval_top3_team_coverage": round(top3 / len(sample), 3),
         "feedback": {"approved": approved, "corrected": corrected, "rejected": rejected},
-        "note": "Retrieval metrics are a reproducible proxy evaluation: each sampled ticket is excluded from its own nearest-neighbor search. Resolution correctness requires a human-labeled benchmark.",
+        "note": "Metrics use the production hybrid FAISS + BM25 + TF-IDF retriever. Each sampled ticket is excluded from its own nearest-neighbor search; resolution correctness requires a human-labeled benchmark.",
     }
 
 
